@@ -1,0 +1,54 @@
+name: Build and Release .NET Framework App
+
+on:
+  push:
+    tags:
+      - '*'
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Debug Release Version
+        run: echo "Release Version ${{github.ref_name}}"
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Restore NuGet Packages
+        run: nuget restore SilkroadSimplestProxy.sln
+
+      - name: Build Solution
+        run: msbuild SilkroadSimplestProxy.sln /p:Configuration=Release
+
+      - name: Archive Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: SilkroadSimplestProxy\bin\Release\*
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: release
+  
+      - name: Zip Release Files
+        run: |
+          powershell Compress-Archive -Path release\* -DestinationPath "SilkroadSimplestProxy-${{github.ref_name}}.zip"
+    
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "SilkroadSimplestProxy-${{github.ref_name}}.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
