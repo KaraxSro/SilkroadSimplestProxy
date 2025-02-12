@@ -3,7 +3,7 @@
 Creadits goes to Drew Benton (a.k.a. pushedx)
 
 - I refactored the code from [this thread](https://www.elitepvpers.com/forum/sro-coding-corner/1193543-c-simplest-proxy.html) to make it easier to understand
-- Made it restart on lost connection lost, so it is possible to use without a loader
+- Made it restart on lost connection, so it is possible to use without a loader
 - Also the AgentServer connection does not use a different process
 - You can download the latest release, no need to mess with building
 
