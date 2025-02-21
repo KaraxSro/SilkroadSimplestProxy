@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SilkroadSimplestProxy
+﻿namespace SilkroadSimplestProxy.Dtos
 {
     internal class Settings
     {

@@ -9,7 +9,7 @@ Creadits goes to Drew Benton (a.k.a. pushedx)
 
 ## Usage
 
-Create a \*.bat file in the folder with the following content
+Edit the **StartProxy.bat** file in the folder, usage:
 
 ```
 SilkroadSimplestProxy.exe <local address> <local port> <remote address> <remote port>
@@ -22,3 +22,9 @@ SilkroadSimplestProxy.exe 127.0.0.1 16000 gwgt1.joymax.com 15779
 ```
 
 Make sure to edit the IP inside your client to point to your **local address**, or use a **loader**.
+
+## v1.01
+- Added logging
+- Added option to show Name of the packets, and also to hide them, see appsettings.json
+- Parsed the packet names from https://github.com/DummkopfOfHachtenduden/SilkroadDoc
+- 0x2002 (CLIENT_GLOBAL_MODULE_KEEP_ALIVE) **is hidden now**

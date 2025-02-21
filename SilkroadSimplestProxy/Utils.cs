@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using SilkroadSecurityApi;
+using SilkroadSimplestProxy.Dtos;
 
 namespace SilkroadSimplestProxy
 {
@@ -25,6 +30,23 @@ namespace SilkroadSimplestProxy
                 Console.WriteLine($"Usage: {Path.GetFileName(Assembly.GetExecutingAssembly().Location)} <{nameof(Settings.LocalHost)}> <{nameof(Settings.LocalPort)}> <{nameof(Settings.RemoteHost)}> <{nameof(Settings.RemotePort)}>");
                 throw;
             }
+        }
+
+        public static Dictionary<int, List<PacketConfig>> GetPacketConfigLookupDict()
+        {
+            var fileContents = File.ReadAllText("appsettings.json");
+
+            var deserialized = JsonConvert.DeserializeObject<AppSettings>(fileContents);
+
+            var packetConfigs = new List<PacketConfig>();
+            packetConfigs.AddRange(deserialized.PacketConfigs.Global);
+            packetConfigs.AddRange(deserialized.PacketConfigs.Agent);
+            packetConfigs.AddRange(deserialized.PacketConfigs.Gateway);
+            packetConfigs.AddRange(deserialized.PacketConfigs.Download);
+
+            return packetConfigs
+                .GroupBy(pc => int.Parse(pc.Opcode, System.Globalization.NumberStyles.HexNumber))
+                .ToDictionary(g => g.Key, g => g.ToList());
         }
 
         public static string GetPacketDataAsString(Packet packet)

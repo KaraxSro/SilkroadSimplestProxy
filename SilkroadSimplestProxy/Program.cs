@@ -1,18 +1,21 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using SilkroadSecurityApi;
-using System.Reflection;
 using System.Threading.Tasks;
+using log4net;
+using SilkroadSimplestProxy.Dtos;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace SilkroadSimplestProxy
 {
 
     class Program
     {
-
+        private readonly static ILog log = LogManager.GetLogger(typeof(Program));
+        private readonly static Dictionary<int, List<PacketConfig>> packetConfigDict = Utils.GetPacketConfigLookupDict();
         static void MainLoop(string localHost, int localPort, string remoteHost, int remotePort, string serverModuleName)
         {
             try
@@ -30,7 +33,7 @@ namespace SilkroadSimplestProxy
                 using var server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 server.Bind(new IPEndPoint(IPAddress.Parse(localHost), localPort));
                 server.Listen(1);
-                Console.WriteLine($"Proxy listening for connections on {localHost}:{localPort}");
+                log.Info($"Proxy listening for connections on {localHost}:{localPort}");
 
                 localContext.Socket = server.Accept();
 
@@ -39,7 +42,8 @@ namespace SilkroadSimplestProxy
                 {
                     remoteContext.Socket.Connect(remoteHost, remotePort);
 
-                    Console.WriteLine($"Connected to Silkroad {serverModuleName} on {remoteHost}:{remotePort}");
+                    log.Info($"Connected to Silkroad {serverModuleName} on {remoteHost}:{remotePort}");
+
                     while (true)
                     {
                         // Network input event processing
@@ -101,13 +105,13 @@ namespace SilkroadSimplestProxy
 
                                     var agentProxyPort = localPort + 1;
 
-                                    // When entering Id and Pw, we disconnect from the gateway and connect to the agent, so we spawn a new process for the agent
+                                    // When entering Id and Pw, we disconnect from the gateway and connect to the agent, so we create a task for the agent
                                     Task.Run(() =>
                                     {
                                         MainLoop(localHost, agentProxyPort, ip, port, "AgentServer");
-                                        Console.WriteLine("Disconnected from AgentServer.");
+                                        log.Info("Disconnected from AgentServer.");
                                         // The proxy started as soon as we connected to AgentServer and disconnected from the GatewayServer, but we show the same notification
-                                        Console.WriteLine($"Proxy listening for connections on {localHost}:{localPort}");
+                                        log.Info($"Proxy listening for connections on {localHost}:{localPort}");
                                     });
                                     
                                     var newPacket = new Packet(0xA102, true);
@@ -142,21 +146,19 @@ namespace SilkroadSimplestProxy
 
                             foreach (var kvp in buffers)
                             {
+                                var initiator = context == localContext ? Initiator.Server : Initiator.Client;
+
                                 var buffer = kvp.Key;
                                 var packet = kvp.Value;
-
-                                var direction = context == localContext ? "S->C" : "C->S";
-
-                                Console.WriteLine($"[{direction}]{Utils.GetPacketDataAsString(packet)}");
 
                                 while (buffer.Offset != buffer.Size)
                                 {
                                     int count = context.Socket.Send(buffer.Buffer, buffer.Offset, buffer.Size, SocketFlags.None);
 
                                     buffer.Offset += count;
-
-                                    Thread.Sleep(1);
                                 }
+
+                                PrintPacket(initiator, packet);
                             }
                         }
 
@@ -168,8 +170,28 @@ namespace SilkroadSimplestProxy
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                log.Error(ex.Message, ex);
             }
+        }
+
+        private static void PrintPacket(Initiator initiator, Packet packet)
+        {
+            // Check if we have anything for this packet in the config
+            packetConfigDict.TryGetValue(packet.Opcode, out List<PacketConfig> packetConfigs);
+            var packetConfig = packetConfigs != null ? packetConfigs.SingleOrDefault(pc => pc.Initiator == initiator) : null;
+
+            if (packetConfig != null)
+            {
+                if(packetConfig.Hide)
+                {
+                    return;
+                }
+
+                log.Warn($"[{packetConfig.Name}]");
+            }
+
+            var directionText = initiator == Initiator.Server ? "S->C" : "C->S";
+            log.Warn($"[{directionText}]{Utils.GetPacketDataAsString(packet)}");
         }
 
         static void Main(string[] args)
