@@ -27,4 +27,4 @@ Make sure to edit the IP inside your client to point to your **local address**, 
 - Added logging
 - Added option to show Name of the packets, and also to hide them, see appsettings.json
 - Parsed the packet names from https://github.com/DummkopfOfHachtenduden/SilkroadDoc
-- 0x2002 (CLIENT_GLOBAL_MODULE_KEEP_ALIVE) **is hidden now**
+- 0x2002 (CLIENT_GLOBAL_MODULE_KEEP_ALIVE) **is hidden by default**. edit appsettings.json to show
